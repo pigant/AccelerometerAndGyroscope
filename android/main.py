@@ -89,11 +89,13 @@ class SensorApp(App):
             self.buffer_acce = Sensor3AxisBuffer()
             self.buffer_gyro = Sensor3AxisBuffer()
             self.buffer_magnet = Sensor3AxisBuffer()
+            self.button.text = 'Pause'
         else:
             self.sensor_acce.quitarRegistro()
             self.sensor_gyro.quitarRegistro()
             self.sensor_magnet.quitarRegistro()
             self.sensor_acce = None
+            self.button.text = 'Start'
 
     @mainthread
     def update_values(self, values, tipo, *args):
@@ -108,9 +110,9 @@ class SensorApp(App):
             self.gyroZ_lbl.text = 'gyro z: {}'.format(values[2])
             self.buffer_gyro.guardar(*values)
         elif tipo == 'TYPE_MAGNETIC_FIELD':
-            self.magnetX_lbl.text = 'gyro x: {}'.format(values[0])
-            self.magnetY_lbl.text = 'gyro y: {}'.format(values[1])
-            self.magnetZ_lbl.text = 'gyro z: {}'.format(values[2])
+            self.magnetX_lbl.text = 'magnet x: {}'.format(values[0])
+            self.magnetY_lbl.text = 'magnet y: {}'.format(values[1])
+            self.magnetZ_lbl.text = 'magnet z: {}'.format(values[2])
             self.buffer_magnet.guardar(*values)
         self.registros.text = "Cantidad de registros: {}".format(
                         self.buffer_acce.size() + self.buffer_gyro.size()+self.buffer_magnet.size())
@@ -127,7 +129,7 @@ class SensorApp(App):
                     data, 
                     {'Content-Tye':'application/json'})
             try:
-                urllib2.urlopen(request)
+                urllib2.urlopen(request, timeout=.2)
             except:
                 pass
         
@@ -137,8 +139,10 @@ class SensorApp(App):
         self.sensor_acce = None
         Clock.schedule_interval(self.enviar_servidor, 1)
         root = BoxLayout(orientation='vertical')
-        root.add_widget(Button(text='Start', font_size='40sp',
-                on_release=self.start_acc))
+        self.button = Button(
+                text='Start', font_size='40sp',
+                on_release=self.start_acc)
+        root.add_widget(self.button)
         self.acceX_lbl = Label(text="acce x")
         self.acceY_lbl = Label(text="acce y")
         self.acceZ_lbl = Label(text="acce z")
