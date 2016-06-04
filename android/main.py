@@ -1,3 +1,4 @@
+#!/bin/env python
 import json
 import urllib
 import urllib2
@@ -54,6 +55,9 @@ class Generic3AxisSensor(PythonJavaClass):
         # print '-> CURRENT THREAD IS', current_thread()
         self.app.update_values(event.values, self.tipo)
 
+    def quitarRegistro(self):
+        self.manager.unregisterListener(self, self.sensor)
+
 
 class Sensor3AxisBuffer(object):
 
@@ -62,6 +66,9 @@ class Sensor3AxisBuffer(object):
         self.y = y
         self.z = z
         self.guardado = list()
+
+    def size(self):
+        return len(self.guardado)
 
     def guardar(self, x, y, z):
         self.guardado.append((x,y,z))
@@ -78,8 +85,15 @@ class SensorApp(App):
         if self.sensor_acce is None:
             self.sensor_acce = Generic3AxisSensor(self, 'TYPE_ACCELEROMETER')
             self.sensor_gyro = Generic3AxisSensor(self, 'TYPE_GYROSCOPE')
+            self.sensor_magnet = Generic3AxisSensor(self, 'TYPE_MAGNETIC_FIELD')
             self.buffer_acce = Sensor3AxisBuffer()
             self.buffer_gyro = Sensor3AxisBuffer()
+            self.buffer_magnet = Sensor3AxisBuffer()
+        else:
+            self.sensor_acce.quitarRegistro()
+            self.sensor_gyro.quitarRegistro()
+            self.sensor_magnet.quitarRegistro()
+            self.sensor_acce = None
 
     @mainthread
     def update_values(self, values, tipo, *args):
@@ -93,18 +107,29 @@ class SensorApp(App):
             self.gyroY_lbl.text = 'gyro y: {}'.format(values[1])
             self.gyroZ_lbl.text = 'gyro z: {}'.format(values[2])
             self.buffer_gyro.guardar(*values)
+        elif tipo == 'TYPE_MAGNETIC_FIELD':
+            self.magnetX_lbl.text = 'gyro x: {}'.format(values[0])
+            self.magnetY_lbl.text = 'gyro y: {}'.format(values[1])
+            self.magnetZ_lbl.text = 'gyro z: {}'.format(values[2])
+            self.buffer_magnet.guardar(*values)
+        self.registros.text = "Cantidad de registros: {}".format(
+                        self.buffer_acce.size() + self.buffer_gyro.size()+self.buffer_magnet.size())
 
     def enviar_servidor(self, nap):
         if self.sensor_acce:
             jdata = {'accelerometer': self.buffer_acce.popAll(),
-                     'gyroscope': self.buffer_gyro.popAll()}
+                     'gyroscope': self.buffer_gyro.popAll(),
+                     'magnetic': self.buffer_magnet.popAll()}
             jdata = {'data': json.dumps(jdata)}
             data = urllib.urlencode(jdata)
             request = urllib2.Request(
-                    'http://192.168.50.22:8000/', 
+                    'http://192.168.50.31:8000/', 
                     data, 
                     {'Content-Tye':'application/json'})
-            urllib2.urlopen(request)
+            try:
+                urllib2.urlopen(request)
+            except:
+                pass
         
 
     def build(self):
@@ -114,25 +139,39 @@ class SensorApp(App):
         root = BoxLayout(orientation='vertical')
         root.add_widget(Button(text='Start', font_size='40sp',
                 on_release=self.start_acc))
-        root.add_widget(ProgressBar(value=0))
-        root.add_widget(ProgressBar(value=0))
-        root.add_widget(ProgressBar(value=0))
         self.acceX_lbl = Label(text="acce x")
         self.acceY_lbl = Label(text="acce y")
         self.acceZ_lbl = Label(text="acce z")
         self.gyroX_lbl = Label(text="gyro x")
         self.gyroY_lbl = Label(text="gyro y")
         self.gyroZ_lbl = Label(text="gyro z")
+        self.magnetX_lbl = Label(text="magnet x")
+        self.magnetY_lbl = Label(text="magnet y")
+        self.magnetZ_lbl = Label(text="magnet z")
+        self.registros = Label(text="Cantidad registros: ")
         root.add_widget(self.acceX_lbl)
         root.add_widget(self.acceY_lbl)
         root.add_widget(self.acceZ_lbl)
         root.add_widget(self.gyroX_lbl)
         root.add_widget(self.gyroY_lbl)
         root.add_widget(self.gyroZ_lbl)
+        root.add_widget(self.magnetX_lbl)
+        root.add_widget(self.magnetY_lbl)
+        root.add_widget(self.magnetZ_lbl)
+        root.add_widget(self.registros)
         return root
 
+    def on_resume(self):
+        if self.sensor_acce:
+            self.sensor_acce = Generic3AxisSensor(self, 'TYPE_ACCELEROMETER')
+            self.sensor_gyro = Generic3AxisSensor(self, 'TYPE_GYROSCOPE')
+            self.sensor_magnet = Generic3AxisSensor(self, 'TYPE_MAGNETIC_FIELD')
+
     def on_pause(self):
-        # print '-----------------------> PAUSE????'
+        if self.sensor_acce:
+            self.sensor_acce.quitarRegistro()
+            self.sensor_gyro.quitarRegistro()
+            self.sensor_magnet.quitarRegistro()
         return True
 
 if __name__ == '__main__':

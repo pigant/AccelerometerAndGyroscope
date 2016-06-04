@@ -9,5 +9,6 @@ def index(request):
         dic = json.loads(request.POST['data'])
         print ('El acc {}'.format(dic['accelerometer']))
         print ('El gyro {}'.format(dic['gyroscope']))
+        print ('El magneto {}'.format(dic['magnetic']))
         print (request.POST['data'])
     return HttpResponse(content='listo')
