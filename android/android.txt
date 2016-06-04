@@ -1,0 +1,3 @@
+title=<accelerometer>
+author=<ignacio>
+orientation=<portrait|landscape>
